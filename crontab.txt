@@ -1,0 +1,4 @@
+# Alternative to the GitHub Actions workflow: run daily at 9am from a
+# machine that stays on. Edit with `crontab -e` and adjust paths.
+#
+# 0 9 * * *  cd /path/to/bellhaven-crm-sync && CRM_API_TOKEN=bh_... /usr/bin/python3 app/pipeline.py >> logs/pipeline.log 2>&1
