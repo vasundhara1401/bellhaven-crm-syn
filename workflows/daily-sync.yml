@@ -1,0 +1,38 @@
+name: Daily Bellhaven CRM sync
+
+on:
+  schedule:
+    # 09:00 UTC every day. Only runs the matching/proposal step — approvals
+    # always require a human in the review app, so this workflow never
+    # writes to the CRM by itself.
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}  # allow manual trigger from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      # decisions.db is committed back so the "already decided" history
+      # persists across runs instead of resetting every time the workflow
+      # spins up a fresh runner. A real deployment would use a persistent
+      # volume or a hosted DB instead of committing a binary file back to
+      # the repo -- this is the "doesn't need to be live" version.
+      - run: python app/pipeline.py
+        env:
+          CRM_API_TOKEN: ${{ secrets.CRM_API_TOKEN }}
+
+      - name: Commit updated decision store
+        run: |
+          git config user.name "bellhaven-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/decisions.db
+          git diff --cached --quiet || git commit -m "Daily sync: new proposals $(date -u +%F)"
+          git push
